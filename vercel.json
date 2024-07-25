@@ -4,9 +4,30 @@
     {
       "src": "d3.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "style.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "script.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "Charter Regular.ttf",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "Charter Bold.ttf",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
-    { "src": "/", "dest": "d3.html" }
+    { "src": "/", "dest": "/d3.html" },
+    { "src": "/style.css", "dest": "/style.css" },
+    { "src": "/script.js", "dest": "/script.js" },
+    { "src": "/Charter Regular.ttf", "dest": "/Charter Regular.ttf" },
+    { "src": "/Charter Bold.ttf", "dest": "/Charter Bold.ttf" },
+    { "src": "/(.*)", "dest": "/d3.html" }
   ]
 }
