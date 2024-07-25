@@ -22,9 +22,12 @@ const svg = d3.select("#graph").append("svg").attr("width", width).attr("height"
 const pack = d3.pack().size([width, height]).padding(1.5);
 
 async function fetchData() {
-  const tokenResponse = await fetch('https://alcor.exchange/api/v2/tokens');
+  const tokenResponse = await fetch('https://wax.alcor.exchange/api/v2/tokens');
+  if (!tokenResponse.ok) throw new Error(`Token API error: ${tokenResponse.statusText}`);
   const tokens = await tokenResponse.json();
-  const poolResponse = await fetch('https://alcor.exchange/api/v2/swap/pools');
+
+  const poolResponse = await fetch('https://wax.alcor.exchange/api/v2/swap/pools');
+  if (!poolResponse.ok) throw new Error(`Pool API error: ${poolResponse.statusText}`);
   const pools = await poolResponse.json();
 
   const tokenData = tokens.map(token => {
@@ -91,4 +94,4 @@ async function updateData(variable) {
   svg.selectAll(".node").select(".ranks").transition().delay(500).duration(1000).attr("dy", "1.8em").text(d => d.data[dict[variable]]).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 7).attr("fill", "white").style("text-anchor", "middle");
 }
 
-fetchData().then(createChart);
+fetchData().then(createChart).catch(error => console.error('Error fetching data:', error));
