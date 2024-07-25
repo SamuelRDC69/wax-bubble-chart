@@ -21,13 +21,16 @@ const svg = d3.select("#graph").append("svg").attr("width", width).attr("height"
 const pack = d3.pack().size([width, height]).padding(1.5);
 
 async function fetchData() {
+  console.log('Fetching data...');
   try {
     const tokenResponse = await fetch('https://wax.alcor.exchange/api/v2/tokens');
     if (!tokenResponse.ok) throw new Error(`Token API error: ${tokenResponse.statusText}`);
+    console.log('Tokens fetched');
     const tokens = await tokenResponse.json();
 
     const poolResponse = await fetch('https://wax.alcor.exchange/api/v2/swap/pools');
     if (!poolResponse.ok) throw new Error(`Pool API error: ${poolResponse.statusText}`);
+    console.log('Pools fetched');
     const pools = await poolResponse.json();
 
     const tokenData = tokens.map(token => {
@@ -49,14 +52,16 @@ async function fetchData() {
       };
     });
 
+    console.log('Data processed', tokenData);
     return tokenData;
   } catch (error) {
     console.error('Error fetching data:', error);
-    throw error; // Re-throw the error to ensure the promise is rejected
+    throw error;
   }
 }
 
 function createChart(data) {
+  console.log('Creating chart...');
   const root = d3.hierarchy({ children: data })
     .sum(d => d.market_cap)
     .sort((a, b) => b.market_cap - a.market_cap);
@@ -83,10 +88,13 @@ function createChart(data) {
   node.append("text").attr("class", "labels").attr("dy", ".2em").text(d => d.data.symbol).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 5).attr("fill", "white").style("text-anchor", "middle");
 
   node.append("text").attr("class", "ranks").attr("dy", "1.8em").text(d => "24H: " + d.data.change24 + "%").attr("font-family", "BloombergBold").attr("font-size", d => d.r / 7).attr("fill", "white").style("text-anchor", "middle");
+  
+  console.log('Chart created');
 }
 
 async function updateData(variable) {
   try {
+    console.log('Updating data...');
     const data = await fetchData();
     const root = d3.hierarchy({ children: data }).sum(d => d[variable]).sort((a, b) => b[variable] - a[variable]);
 
@@ -95,6 +103,8 @@ async function updateData(variable) {
     svg.selectAll(".node").select(".labels").transition().duration(2000).attr("dy", ".2em").style("text-anchor", "middle").text(d => d.data.symbol).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 5).attr("fill", "white");
 
     svg.selectAll(".node").select(".ranks").transition().delay(500).duration(1000).attr("dy", "1.8em").text(d => d.data[dict[variable]]).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 7).attr("fill", "white").style("text-anchor", "middle");
+    
+    console.log('Data updated');
   } catch (error) {
     console.error('Error updating data:', error);
   }
