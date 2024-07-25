@@ -1,7 +1,5 @@
-//Million format fonction
-var millionsFormat = d3.format("$,");
+const millionsFormat = d3.format("$,");
 
-//Special Format for the data supply
 function supplyFormat(x) {
   var s = d3.format(".3s")(x);
   switch (s[s.length - 1]) {
@@ -10,197 +8,87 @@ function supplyFormat(x) {
   return s;
 }
 
-//A dict to change the last label of the bubble
-var dict = {
-    market_cap: "market_capClean",
-    volume_24h: "volume_24hClean",
-    price: "priceClean",
-    circulating_supply: "circulating_supplyClean"
+const dict = {
+  market_cap: "market_capClean",
+  volume_24h: "volume_24hClean",
+  price: "priceClean",
+  circulating_supply: "circulating_supplyClean"
 };
 
-//Setting width and height
-var width = window.innerWidth, height = 500;
+const width = window.innerWidth, height = 500;
 
-//Svg creation
-var svg = d3.select("#graph").append("svg").attr("width", width).attr("height", height).attr("overflow","hidden")
-//        .call(d3.zoom().on("zoom", function () {
-//            svg.attr("transform", d3.event.transform)
-//              }));
+const svg = d3.select("#graph").append("svg").attr("width", width).attr("height", height).attr("overflow", "hidden");
 
-//creating a pack
-var pack = d3.pack()
-  .size([width, height])
-  .padding(1.5);
+const pack = d3.pack().size([width, height]).padding(1.5);
 
+async function fetchData() {
+  const tokenResponse = await fetch('https://alcor.exchange/api/v2/tokens');
+  const tokens = await tokenResponse.json();
+  const poolResponse = await fetch('https://alcor.exchange/api/v2/swap/pools');
+  const pools = await poolResponse.json();
 
-// Importing data and processing it
-d3.csv("CMC Crypto Portfolio Tracker - CleanSummary 04 06 2021.csv", function(d) {
-  return {
-    symbol: d.symbol,
-    name : d.name,
-    cmc_rank : d.cmc_rank,
-    market_cap: +d.market_cap.replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    market_capClean: millionsFormat(+d.market_cap.replace(/\,/g, '').replace(/\./g, '').slice(0,-2)),
-    volume_24h: +d.volume_24h.replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    volume_24hClean: millionsFormat(+d.volume_24h.replace(/\,/g, '').replace(/\./g, '').slice(0,-2)),    
-    price: +d.price.replace(/\$/g, '').replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    priceClean: millionsFormat(+d.price.replace(/\,/g, '')),
-    circulating_supply: +d.circulating_supply.replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    circulating_supplyClean: supplyFormat(+d.circulating_supply.replace(/\,/g, '').replace(/\./g, '').slice(0,-2)) 
+  const tokenData = tokens.map(token => {
+    const relevantPools = pools.filter(pool => pool.tokenA.symbol === token.symbol || pool.tokenB.symbol === token.symbol);
+    
+    const avgChange24 = relevantPools.reduce((acc, pool) => acc + pool.change24, 0) / relevantPools.length;
+    const avgChangeWeek = relevantPools.reduce((acc, pool) => acc + pool.changeWeek, 0) / relevantPools.length;
+
+    return {
+      symbol: token.symbol,
+      market_cap: token.usd_price * 1e6, // Example conversion, adapt as necessary
+      market_capClean: millionsFormat(token.usd_price * 1e6),
+      volume_24h: token.usd_price * 1e3, // Example conversion, adapt as necessary
+      volume_24hClean: millionsFormat(token.usd_price * 1e3),
+      price: token.usd_price,
+      priceClean: millionsFormat(token.usd_price),
+      circulating_supply: token.usd_price * 1e2, // Example conversion, adapt as necessary
+      circulating_supplyClean: supplyFormat(token.usd_price * 1e2),
+      change24: avgChange24,
+      changeWeek: avgChangeWeek
+    };
+  });
+
+  return tokenData;
+}
+
+function createChart(data) {
+  const root = d3.hierarchy({ children: data })
+    .sum(d => d.market_cap)
+    .sort((a, b) => b.market_cap - a.market_cap);
+
+  const tooltip = d3.select('#graph').append("div").style("opacity", 0).attr("class", "tooltip").style("background-color", "black").style("border-radius", "5px").style("padding", "10px").style("color", "white").style("position", "absolute");
+
+  const showTooltip = d => {
+    tooltip.transition().duration(200).style("opacity", 1);
+    tooltip.html("Currency: " + d.data.symbol + "<br> Market Capitalization: " + d.data.market_capClean + "<br> 24H Change: " + d.data.change24 + "%<br> 7D Change: " + d.data.changeWeek + "%").style("left", (d.x + (d3.mouse(this)[0] + 30)) + "px").style("top", (d.y + (d3.mouse(this)[1] + 30)) + "px");
   };
-}).then(function(data) {
 
-  //Creating a hierarchy
-	var root = d3.hierarchy({children: data})
-	.sum(function(d) { return d.market_cap; })
-	.sort(function(a, b) { return b.market_cap - a.market_cap; })
-
-  //Appending the tooltips
-  var tooltip = d3.select('#graph')
-    .append("div")
-    .style("opacity", 0)
-    .attr("class", "tooltip")
-    .style("background-color", "black")
-    .style("border-radius", "5px")
-    .style("padding", "10px")
-    .style("color", "white")
-    .style("position", "absolute")
-    ;
-  
-  //1st function about the tooltip
-  let showTooltip = function(d) {
-    tooltip
-      .transition()
-      .duration(200)
-    tooltip
-      .style("opacity", 1)
-      .html("Currency: " + d.data.symbol + "<br> Market Capitalization: " + d.data.market_capClean)
-      .style("left", (d.x + (d3.mouse(this)[0] + 30)) + "px")
-      .style("top", (d.y + (d3.mouse(this)[1] + 30)) + "px");
-  }
-
-  //2nd function about the tooltip
-  let moveTooltip = function(d) {
-    tooltip
-      .style("left", (d.x + (d3.mouse(this)[0] + 30)) + "px")
-      .style("top", (d.y + (d3.mouse(this)[1] + 30)) + "px");
-  }
-
-  //3rd function about the tooltip
-  let hideTooltip = function(d) {
-          tooltip
-            .transition()
-            .duration(200)
-            .style("opacity", 0);
-        }
-
-  //Creating nodes from the hierarchy and placing the nodes in the svg
-	var node = svg.selectAll(".node")
-	.data(pack(root).leaves())
-	.enter().append("g")
-	  .attr("class", "node")
-	  .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-    .on("mouseover", showTooltip)
-    .on("mousemove", moveTooltip)
-    .on("mouseleave", hideTooltip);
-
-  //Appending the circles
-  node.append("circle")
-      .attr("id", function(d) { return d.id; })
-      .attr("r", function(d) { return d.r; })
-      .attr("fill", "black")
-
-  //Appending the main labels
-  node.append("text")
-        .attr("class","labels")
-        .attr("dy", ".2em")
-        .text(function(d) {
-            return d.data.symbol ;
-        })
-        .attr("font-family", "BloombergBold")
-        .attr("font-size", function(d){
-            return d.r/5;
-        })
-        .attr("fill", "white")
-        .style("text-anchor", "middle")
-
-  //Appending the second labels      
-  node.append("text")
-        .attr("class","ranks")
-        .attr("dy", "1.8em")
-        .text(function(d) {
-            return "CMC Rank" + " " + d.data.cmc_rank ;
-        })
-        .attr("font-family", "BloombergBold")
-        .attr("font-size", function(d){
-            return d.r/7;
-        })
-        .attr("fill", "white")
-        .style("text-anchor", "middle")
-
-	});
-  
-//Creating the function allowing the update of the data in the bubbles
-function updateData(variable) {
-  d3.csv("CMC Crypto Portfolio Tracker - CleanSummary 04 06 2021.csv", function(d) {
-  return {
-    symbol: d.symbol,
-    name : d.name,
-    cmc_rank : d.cmc_rank,
-    market_cap: +d.market_cap.replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    market_capClean: millionsFormat(+d.market_cap.replace(/\,/g, '').replace(/\./g, '').slice(0,-2)),
-    volume_24h: +d.volume_24h.replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    volume_24hClean: millionsFormat(+d.volume_24h.replace(/\,/g, '').replace(/\./g, '').slice(0,-2)),    
-    price: +d.price.replace(/\$/g, '').replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    priceClean: millionsFormat(+d.price.replace(/\,/g, '')),
-    circulating_supply: +d.circulating_supply.replace(/\,/g, '').replace(/\./g, '').slice(0,-2),
-    circulating_supplyClean: supplyFormat(+d.circulating_supply.replace(/\,/g, '').replace(/\./g, '').slice(0,-2)) 
+  const moveTooltip = d => {
+    tooltip.style("left", (d.x + (d3.mouse(this)[0] + 30)) + "px").style("top", (d.y + (d3.mouse(this)[1] + 30)) + "px");
   };
-}).then(function(data) {
 
-	var root = d3.hierarchy({children: data})
-	.sum(function(d) { return d[variable]; })
-	.sort(function(a, b) { return b[variable] - a[variable]; })
+  const hideTooltip = d => {
+    tooltip.transition().duration(200).style("opacity", 0);
+  };
 
-	var node = svg.selectAll(".node")
-	  .data(pack(root).leaves())
-    .transition()
-    .duration(2000)
-	  .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-    .select("circle")
-      .attr("id", function(d) { return d.id; })
-      .attr("r", function(d) { return d.r; })
-      .attr("fill", "black")
+  const node = svg.selectAll(".node").data(pack(root).leaves()).enter().append("g").attr("class", "node").attr("transform", d => "translate(" + d.x + "," + d.y + ")").on("mouseover", showTooltip).on("mousemove", moveTooltip).on("mouseleave", hideTooltip);
 
-   svg.selectAll(".node").select(".labels")
-        .transition()
-        .duration(2000)
-        .attr("dy", ".2em")
-        .style("text-anchor", "middle")
-        .text(function(d) {
-            return d.data.symbol;
-        })
-        .attr("font-family", "BloombergBold")
-        .attr("font-size", function(d){
-            return d.r/5;
-        })
-        .attr("fill", "white");
+  node.append("circle").attr("id", d => d.id).attr("r", d => d.r).attr("fill", "black");
 
-     svg.selectAll(".node").select(".ranks")
-        .transition()
-        .delay(500)
-        .duration(1000)
-        .attr("dy", "1.8em")
-        .text(function(d) {
-            return d.data[dict[variable]] ;
-        })
-        .attr("font-family", "BloombergBold")
-        .attr("font-size", function(d){
-            return d.r/7;
-        })
-        .attr("fill", "white")
-        .style("text-anchor", "middle");
+  node.append("text").attr("class", "labels").attr("dy", ".2em").text(d => d.data.symbol).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 5).attr("fill", "white").style("text-anchor", "middle");
 
-	});
+  node.append("text").attr("class", "ranks").attr("dy", "1.8em").text(d => "24H: " + d.data.change24 + "%").attr("font-family", "BloombergBold").attr("font-size", d => d.r / 7).attr("fill", "white").style("text-anchor", "middle");
+}
 
-};
+async function updateData(variable) {
+  const data = await fetchData();
+  const root = d3.hierarchy({ children: data }).sum(d => d[variable]).sort((a, b) => b[variable] - a[variable]);
+
+  const node = svg.selectAll(".node").data(pack(root).leaves()).transition().duration(2000).attr("transform", d => "translate(" + d.x + "," + d.y + ")").select("circle").attr("id", d => d.id).attr("r", d => d.r).attr("fill", "black");
+
+  svg.selectAll(".node").select(".labels").transition().duration(2000).attr("dy", ".2em").style("text-anchor", "middle").text(d => d.data.symbol).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 5).attr("fill", "white");
+
+  svg.selectAll(".node").select(".ranks").transition().delay(500).duration(1000).attr("dy", "1.8em").text(d => d.data[dict[variable]]).attr("font-family", "BloombergBold").attr("font-size", d => d.r / 7).attr("fill", "white").style("text-anchor", "middle");
+}
+
+fetchData().then(createChart);
