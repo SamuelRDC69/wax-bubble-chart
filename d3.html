@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
   <title>Crypto Market Bubble Chart</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
-  <script src="https://d3js.org/d3.v5.js"></script>
+  <link href="style.css" rel="stylesheet" type="text/css" onload="console.log('style.css loaded')" onerror="console.error('style.css failed to load')" />
+  <script src="https://d3js.org/d3.v5.js" onload="console.log('d3.js loaded')" onerror="console.error('d3.js failed to load')"></script>
 </head>
 <body>
   <h1>Cryptocurrencies Market Capitalization</h1>
@@ -20,6 +20,6 @@
     <label style="display: inline-block; margin: 5px 10px 3px 0; font-size: 0.85em;" for="price">Price</label>
   </div> 
   <div id="graph"></div>
-  <script src="script.js"></script>
+  <script src="script.js" onload="console.log('script.js loaded')" onerror="console.error('script.js failed to load')"></script>
 </body>
 </html>
