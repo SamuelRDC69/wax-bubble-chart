@@ -6,11 +6,11 @@ body {
 }
 @font-face {
 	font-family: "BloombergBold";
-	src: url('Charter Regular.ttf');
+	src: url('charter-regular.ttf'); /* Make sure the file name matches exactly */
 }
 @font-face {
 	font-family: "BloombergRoman";
-	src: url('Charter Regular.ttf');
+	src: url('charter-regular.ttf'); /* Make sure the file name matches exactly */
 }
 
 h1 {
@@ -29,7 +29,6 @@ h3 {
   font-size: 20px;
   text-align: center;
 }
-
 
 .warning {
   font-family: "BloombergBold";
